@@ -4,19 +4,16 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { MarkdownRenderer } from "@/components/markdown-renderer"
-import { SalesChart } from "@/components/charts/sales-chart"
-import { CategoryChart } from "@/components/charts/category-chart"
-import { TrendChart } from "@/components/charts/trend-chart"
+import { MarkdownWithCharts } from "@/components/markdown-with-charts"
 import { Send, Bot, User, BarChart3 } from "lucide-react"
 
 interface Message {
   id: string
   role: "user" | "assistant"
   content: string
-  charts?: ("sales" | "category" | "trend")[]
 }
 
+// Markdown com gráficos definidos via blocos de código ```chart
 const aiAnalysisResponse = `## Relatório de Análise de Vendas - Q2 2024
 
 Com base nos dados fornecidos, aqui está uma análise completa do desempenho comercial:
@@ -24,8 +21,6 @@ Com base nos dados fornecidos, aqui está uma análise completa do desempenho co
 ### Resumo Executivo
 
 Os resultados do segundo trimestre mostram um **crescimento consistente** nas vendas, superando as metas estabelecidas em 4 dos 6 meses analisados.
-
----
 
 ### Desempenho Mensal
 
@@ -38,31 +33,75 @@ Os resultados do segundo trimestre mostram um **crescimento consistente** nas ve
 | Maio | 5.800 | 5.000 | +16,0% | Atingida |
 | Junho | 6.200 | 5.500 | +12,7% | Atingida |
 
----
+\`\`\`chart
+{
+  "type": "bar",
+  "title": "Vendas vs Meta Mensal",
+  "data": [
+    { "name": "Jan", "vendas": 4200, "meta": 4000 },
+    { "name": "Fev", "vendas": 3800, "meta": 4000 },
+    { "name": "Mar", "vendas": 5100, "meta": 4500 },
+    { "name": "Abr", "vendas": 4700, "meta": 4500 },
+    { "name": "Mai", "vendas": 5800, "meta": 5000 },
+    { "name": "Jun", "vendas": 6200, "meta": 5500 }
+  ],
+  "config": {
+    "vendas": { "label": "Vendas", "color": "hsl(142, 76%, 36%)" },
+    "meta": { "label": "Meta", "color": "hsl(215, 20%, 65%)" }
+  },
+  "showExport": true
+}
+\`\`\`
 
 ### Distribuição por Categoria
 
 A análise por categoria revela insights importantes sobre o mix de produtos:
 
-| Categoria | Participação | Tendência |
-|-----------|--------------|-----------|
-| Eletrônicos | 35% | Em alta |
-| Vestuário | 25% | Estável |
-| Alimentos | 20% | Estável |
-| Casa | 12% | Em queda |
-| Outros | 8% | Estável |
-
----
+\`\`\`chart
+{
+  "type": "pie",
+  "title": "Participação por Categoria",
+  "data": [
+    { "name": "Eletrônicos", "value": 35 },
+    { "name": "Vestuário", "value": 25 },
+    { "name": "Alimentos", "value": 20 },
+    { "name": "Casa", "value": 12 },
+    { "name": "Outros", "value": 8 }
+  ],
+  "config": {
+    "eletronicos": { "label": "Eletrônicos", "color": "hsl(142, 76%, 36%)" },
+    "vestuario": { "label": "Vestuário", "color": "hsl(215, 70%, 50%)" },
+    "alimentos": { "label": "Alimentos", "color": "hsl(280, 65%, 60%)" },
+    "casa": { "label": "Casa", "color": "hsl(35, 90%, 55%)" },
+    "outros": { "label": "Outros", "color": "hsl(215, 20%, 65%)" }
+  },
+  "showExport": false
+}
+\`\`\`
 
 ### Análise de Tendências
 
 O gráfico de tendências mostra uma **correlação positiva** entre receita e custos, mantendo margens saudáveis:
 
-- **Margem média**: 38,5%
-- **Crescimento receita**: +48,8% (Jan-Jun)
-- **Crescimento custos**: +31,7% (Jan-Jun)
-
----
+\`\`\`chart
+{
+  "type": "line",
+  "title": "Tendência de Receita e Custos",
+  "data": [
+    { "name": "Jan", "receita": 12500, "custos": 8200 },
+    { "name": "Fev", "receita": 11800, "custos": 7900 },
+    { "name": "Mar", "receita": 15200, "custos": 9100 },
+    { "name": "Abr", "receita": 14100, "custos": 8800 },
+    { "name": "Mai", "receita": 17400, "custos": 10200 },
+    { "name": "Jun", "receita": 18600, "custos": 10800 }
+  ],
+  "config": {
+    "receita": { "label": "Receita", "color": "hsl(142, 76%, 36%)" },
+    "custos": { "label": "Custos", "color": "hsl(215, 70%, 50%)" }
+  },
+  "showExport": true
+}
+\`\`\`
 
 ### Principais Insights
 
@@ -78,8 +117,6 @@ O gráfico de tendências mostra uma **correlação positiva** entre receita e c
 - Aumentar estoque de **eletrônicos** para atender demanda crescente
 - Revisar estratégia da categoria **Casa** 
 - Manter foco em eficiência operacional
-
----
 
 *Análise gerada automaticamente com base nos dados de vendas do período.*`
 
@@ -107,56 +144,10 @@ export function ChatDemo() {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: aiAnalysisResponse,
-        charts: ["sales", "category", "trend"],
       }
       setMessages((prev) => [...prev, assistantMessage])
       setIsLoading(false)
     }, 2000)
-  }
-
-  const renderChart = (chartType: "sales" | "category" | "trend", index: number) => {
-    const titles = {
-      sales: "Vendas vs Meta Mensal",
-      category: "Distribuição por Categoria",
-      trend: "Tendência de Receita e Custos",
-    }
-
-    return (
-      <Card key={chartType} className="my-4 overflow-hidden border-border bg-card/50">
-        <div className="border-b border-border bg-muted/30 px-4 py-2">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">{titles[chartType]}</span>
-          </div>
-        </div>
-        <div className="p-4">
-          {chartType === "sales" && <SalesChart />}
-          {chartType === "category" && <CategoryChart />}
-          {chartType === "trend" && <TrendChart />}
-        </div>
-      </Card>
-    )
-  }
-
-  const renderMessageContent = (message: Message) => {
-    if (message.role === "user") {
-      return <p>{message.content}</p>
-    }
-
-    const parts = message.content.split("---")
-
-    return (
-      <div className="space-y-2">
-        {parts.map((part, index) => (
-          <div key={index}>
-            <MarkdownRenderer content={part.trim()} />
-            {message.charts && index === 1 && renderChart("sales", 0)}
-            {message.charts && index === 2 && renderChart("category", 1)}
-            {message.charts && index === 3 && renderChart("trend", 2)}
-          </div>
-        ))}
-      </div>
-    )
   }
 
   return (
@@ -168,7 +159,7 @@ export function ChatDemo() {
           </div>
           <div>
             <h1 className="text-lg font-semibold text-foreground">Assistente de Análise</h1>
-            <p className="text-sm text-muted-foreground">Respostas em Markdown com gráficos interativos</p>
+            <p className="text-sm text-muted-foreground">Gráficos definidos diretamente no Markdown</p>
           </div>
         </div>
       </header>
@@ -180,12 +171,23 @@ export function ChatDemo() {
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                 <BarChart3 className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h2 className="mb-2 text-xl font-semibold text-foreground">Assistente de Dados</h2>
-              <p className="mb-6 max-w-md text-muted-foreground">
-                Pergunte sobre vendas, tendências ou performance para receber uma análise completa com gráficos.
+              <h2 className="mb-2 text-xl font-semibold text-foreground">Charts via Markdown</h2>
+              <p className="mb-4 max-w-md text-muted-foreground">
+                Os gráficos são definidos usando blocos de código <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">```chart</code> diretamente no markdown.
               </p>
+              <pre className="mb-6 rounded-lg bg-muted p-4 text-left text-xs overflow-x-auto max-w-lg">
+{`\`\`\`chart
+{
+  "type": "bar",
+  "title": "Meu Gráfico",
+  "data": [...],
+  "config": {...},
+  "showExport": true
+}
+\`\`\``}
+              </pre>
               <div className="flex flex-wrap justify-center gap-2">
-                {["Analise as vendas do Q2", "Mostre a distribuição de categorias", "Qual a tendência de receita?"].map(
+                {["Analise as vendas do Q2", "Mostre gráficos de tendência", "Relatório completo"].map(
                   (suggestion) => (
                     <Button
                       key={suggestion}
@@ -220,7 +222,11 @@ export function ChatDemo() {
                     : "max-w-[90%] bg-card"
                 }`}
               >
-                {renderMessageContent(message)}
+                {message.role === "user" ? (
+                  <p>{message.content}</p>
+                ) : (
+                  <MarkdownWithCharts content={message.content} />
+                )}
               </Card>
 
               {message.role === "user" && (
@@ -243,7 +249,7 @@ export function ChatDemo() {
                     <div className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]" />
                     <div className="h-2 w-2 animate-bounce rounded-full bg-primary" />
                   </div>
-                  <span className="text-sm text-muted-foreground">Analisando dados e gerando gráficos...</span>
+                  <span className="text-sm text-muted-foreground">Gerando análise com gráficos...</span>
                 </div>
               </Card>
             </div>
