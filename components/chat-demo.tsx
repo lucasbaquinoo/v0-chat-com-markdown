@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { MarkdownWithCharts } from "@/components/markdown-with-charts"
-import { Send, Bot, User, BarChart3 } from "lucide-react"
+import { Send, Bot, User, BarChart3, Copy, Check, ThumbsUp, ThumbsDown } from "lucide-react"
 
 interface Message {
   id: string
   role: "user" | "assistant"
   content: string
+  feedback?: "up" | "down" | null
 }
 
 // Markdown com gráficos definidos via blocos de código ```chart
@@ -124,6 +125,23 @@ export function ChatDemo() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const handleCopy = async (content: string, messageId: string) => {
+    await navigator.clipboard.writeText(content)
+    setCopiedId(messageId)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  const handleFeedback = (messageId: string, feedback: "up" | "down") => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? { ...msg, feedback: msg.feedback === feedback ? null : feedback }
+          : msg
+      )
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -225,7 +243,55 @@ export function ChatDemo() {
                 {message.role === "user" ? (
                   <p>{message.content}</p>
                 ) : (
-                  <MarkdownWithCharts content={message.content} />
+                  <div className="space-y-3">
+                    <MarkdownWithCharts content={message.content} />
+                    
+                    <div className="flex items-center gap-1 pt-3 border-t border-border">
+                      <button
+                        onClick={() => handleCopy(message.content, message.id)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                        title="Copiar resposta"
+                      >
+                        {copiedId === message.id ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-green-500" />
+                            <span className="text-green-500">Copiado</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>Copiar</span>
+                          </>
+                        )}
+                      </button>
+                      
+                      <div className="w-px h-4 bg-border mx-1" />
+                      
+                      <button
+                        onClick={() => handleFeedback(message.id, "up")}
+                        className={`inline-flex items-center gap-1 px-2 py-1.5 text-xs rounded-md transition-colors ${
+                          message.feedback === "up"
+                            ? "text-green-500 bg-green-500/10"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        }`}
+                        title="Resposta util"
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5" />
+                      </button>
+                      
+                      <button
+                        onClick={() => handleFeedback(message.id, "down")}
+                        className={`inline-flex items-center gap-1 px-2 py-1.5 text-xs rounded-md transition-colors ${
+                          message.feedback === "down"
+                            ? "text-red-500 bg-red-500/10"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        }`}
+                        title="Resposta nao util"
+                      >
+                        <ThumbsDown className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 )}
               </Card>
 
