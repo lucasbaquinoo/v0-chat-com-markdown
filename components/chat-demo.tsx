@@ -1,17 +1,24 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { MarkdownWithCharts } from "@/components/markdown-with-charts"
-import { Send, Bot, User, BarChart3, Copy, Check, ThumbsUp, ThumbsDown } from "lucide-react"
+import { Send, Bot, User, BarChart3, Copy, Check, ThumbsUp, ThumbsDown, Sparkles, ChevronDown, ChevronUp } from "lucide-react"
+
+interface ThinkingStep {
+  text: string
+  duration: number
+}
 
 interface Message {
   id: string
   role: "user" | "assistant"
   content: string
   feedback?: "up" | "down" | null
+  thinkingTime?: number
+  thinkingSteps?: ThinkingStep[]
 }
 
 // Markdown com gráficos definidos via blocos de código ```chart
@@ -121,11 +128,108 @@ O gráfico de tendências mostra uma **correlação positiva** entre receita e c
 
 *Análise gerada automaticamente com base nos dados de vendas do período.*`
 
+const thinkingSteps: ThinkingStep[] = [
+  { text: "Analisando a consulta do usuário...", duration: 800 },
+  { text: "Buscando dados relevantes no banco...", duration: 1200 },
+  { text: "Processando métricas de vendas...", duration: 1000 },
+  { text: "Gerando visualizações de dados...", duration: 1500 },
+  { text: "Calculando tendências e insights...", duration: 1000 },
+  { text: "Formatando resposta final...", duration: 500 },
+]
+
+function ThinkingIndicator({ 
+  steps, 
+  currentStep, 
+  elapsedTime 
+}: { 
+  steps: ThinkingStep[]
+  currentStep: number
+  elapsedTime: number 
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="relative flex h-5 w-5 items-center justify-center">
+          <div className="absolute h-5 w-5 animate-ping rounded-full bg-primary/30" />
+          <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+        </div>
+        <span className="text-sm font-medium text-foreground">Pensando...</span>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {(elapsedTime / 1000).toFixed(1)}s
+        </span>
+      </div>
+      
+      <div className="space-y-1.5 pl-7">
+        {steps.slice(0, currentStep + 1).map((step, index) => (
+          <div 
+            key={index}
+            className={`flex items-center gap-2 text-xs transition-opacity ${
+              index === currentStep ? "text-foreground" : "text-muted-foreground"
+            }`}
+          >
+            {index < currentStep ? (
+              <Check className="h-3 w-3 text-green-500" />
+            ) : (
+              <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            )}
+            <span>{step.text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ThinkingSummary({ 
+  thinkingTime, 
+  steps 
+}: { 
+  thinkingTime: number
+  steps: ThinkingStep[] 
+}) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  
+  return (
+    <div className="mb-4">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <Sparkles className="h-3.5 w-3.5" />
+        <span>Pensou por {(thinkingTime / 1000).toFixed(1)} segundos</span>
+        {isExpanded ? (
+          <ChevronUp className="h-3.5 w-3.5" />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5" />
+        )}
+      </button>
+      
+      {isExpanded && (
+        <div className="mt-2 space-y-1 pl-5 border-l-2 border-muted">
+          {steps.map((step, index) => (
+            <div key={index} className="flex items-center gap-2 text-xs text-muted-foreground py-0.5">
+              <Check className="h-3 w-3 text-green-500 shrink-0" />
+              <span>{step.text}</span>
+              <span className="text-muted-foreground/60 tabular-nums">
+                {(step.duration / 1000).toFixed(1)}s
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ChatDemo() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [isThinking, setIsThinking] = useState(false)
+  const [currentThinkingStep, setCurrentThinkingStep] = useState(0)
+  const [thinkingElapsed, setThinkingElapsed] = useState(0)
+  const thinkingStartRef = useRef<number>(0)
 
   const handleCopy = async (content: string, messageId: string) => {
     await navigator.clipboard.writeText(content)
@@ -143,6 +247,17 @@ export function ChatDemo() {
     )
   }
 
+  // Timer para atualizar o tempo decorrido durante thinking
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (isThinking) {
+      interval = setInterval(() => {
+        setThinkingElapsed(Date.now() - thinkingStartRef.current)
+      }, 100)
+    }
+    return () => clearInterval(interval)
+  }, [isThinking])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isLoading) return
@@ -156,16 +271,40 @@ export function ChatDemo() {
     setMessages((prev) => [...prev, userMessage])
     setInput("")
     setIsLoading(true)
+    setIsThinking(true)
+    setCurrentThinkingStep(0)
+    setThinkingElapsed(0)
+    thinkingStartRef.current = Date.now()
 
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: aiAnalysisResponse,
+    // Simular os passos de thinking
+    let stepIndex = 0
+    const runThinkingSteps = () => {
+      if (stepIndex < thinkingSteps.length - 1) {
+        setTimeout(() => {
+          stepIndex++
+          setCurrentThinkingStep(stepIndex)
+          runThinkingSteps()
+        }, thinkingSteps[stepIndex].duration)
+      } else {
+        // Thinking completo, gerar resposta
+        setTimeout(() => {
+          const totalThinkingTime = Date.now() - thinkingStartRef.current
+          setIsThinking(false)
+          
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: aiAnalysisResponse,
+            thinkingTime: totalThinkingTime,
+            thinkingSteps: thinkingSteps,
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          setIsLoading(false)
+        }, thinkingSteps[stepIndex].duration)
       }
-      setMessages((prev) => [...prev, assistantMessage])
-      setIsLoading(false)
-    }, 2000)
+    }
+    
+    runThinkingSteps()
   }
 
   return (
@@ -244,6 +383,12 @@ export function ChatDemo() {
                   <p>{message.content}</p>
                 ) : (
                   <div className="space-y-3">
+                    {message.thinkingTime && message.thinkingSteps && (
+                      <ThinkingSummary 
+                        thinkingTime={message.thinkingTime} 
+                        steps={message.thinkingSteps} 
+                      />
+                    )}
                     <MarkdownWithCharts content={message.content} />
                     
                     <div className="flex items-center gap-1 pt-3 border-t border-border">
@@ -308,15 +453,23 @@ export function ChatDemo() {
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary">
                 <Bot className="h-4 w-4 text-primary-foreground" />
               </div>
-              <Card className="bg-card px-5 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <div className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]" />
-                    <div className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]" />
-                    <div className="h-2 w-2 animate-bounce rounded-full bg-primary" />
+              <Card className="bg-card px-5 py-4 max-w-[90%]">
+                {isThinking ? (
+                  <ThinkingIndicator 
+                    steps={thinkingSteps}
+                    currentStep={currentThinkingStep}
+                    elapsedTime={thinkingElapsed}
+                  />
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]" />
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]" />
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-primary" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Gerando resposta...</span>
                   </div>
-                  <span className="text-sm text-muted-foreground">Gerando análise com gráficos...</span>
-                </div>
+                )}
               </Card>
             </div>
           )}
