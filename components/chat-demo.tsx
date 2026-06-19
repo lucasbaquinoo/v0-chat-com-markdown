@@ -128,6 +128,86 @@ O gráfico de tendências mostra uma **correlação positiva** entre receita e c
 
 *Análise gerada automaticamente com base nos dados de vendas do período.*`
 
+// Markdown com árvore de arquivos definida via bloco de código ```tree
+const fileTreeResponse = `## Estrutura do Projeto
+
+Aqui está a organização de arquivos recomendada para o seu projeto **Next.js**:
+
+\`\`\`tree
+{
+  "title": "meu-projeto/",
+  "nodes": [
+    {
+      "name": "app",
+      "type": "folder",
+      "children": [
+        { "name": "layout.tsx", "type": "file" },
+        { "name": "page.tsx", "type": "file" },
+        { "name": "globals.css", "type": "file" },
+        {
+          "name": "dashboard",
+          "type": "folder",
+          "children": [
+            { "name": "page.tsx", "type": "file" },
+            { "name": "loading.tsx", "type": "file" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "components",
+      "type": "folder",
+      "badge": "12",
+      "children": [
+        { "name": "chat-demo.tsx", "type": "file" },
+        { "name": "file-tree.tsx", "type": "file" },
+        { "name": "markdown-with-charts.tsx", "type": "file" },
+        {
+          "name": "ui",
+          "type": "folder",
+          "children": [
+            { "name": "button.tsx", "type": "file" },
+            { "name": "card.tsx", "type": "file" },
+            { "name": "input.tsx", "type": "file" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lib",
+      "type": "folder",
+      "children": [
+        { "name": "utils.ts", "type": "file" }
+      ]
+    },
+    {
+      "name": "public",
+      "type": "folder",
+      "children": [
+        { "name": "logo.svg", "type": "file" },
+        { "name": "hero.png", "type": "file" }
+      ]
+    },
+    { "name": "package.json", "type": "file" },
+    { "name": "tsconfig.json", "type": "file" },
+    { "name": "README.md", "type": "file" }
+  ]
+}
+\`\`\`
+
+### Descrição das Pastas
+
+| Pasta | Responsabilidade |
+|-------|------------------|
+| \`app/\` | Rotas e páginas (App Router) |
+| \`components/\` | Componentes reutilizáveis de UI |
+| \`lib/\` | Funções utilitárias e helpers |
+| \`public/\` | Arquivos estáticos (imagens, ícones) |
+
+> Clique nas pastas para expandir ou recolher a estrutura. Use o botão **Copiar** para exportar a árvore em formato ASCII.
+
+*Estrutura gerada com base nas convenções do Next.js App Router.*`
+
 const thinkingSteps: ThinkingStep[] = [
   { text: "Analisando a consulta do usuário...", duration: 800 },
   { text: "Buscando dados relevantes no banco...", duration: 1200 },
@@ -268,6 +348,18 @@ export function ChatDemo() {
       content: input,
     }
 
+    // Escolhe a resposta com base na pergunta
+    const normalized = input.toLowerCase()
+    const isTreeQuery =
+      normalized.includes("arquivo") ||
+      normalized.includes("estrutura") ||
+      normalized.includes("pasta") ||
+      normalized.includes("projeto") ||
+      normalized.includes("árvore") ||
+      normalized.includes("arvore") ||
+      normalized.includes("tree")
+    const responseContent = isTreeQuery ? fileTreeResponse : aiAnalysisResponse
+
     setMessages((prev) => [...prev, userMessage])
     setInput("")
     setIsLoading(true)
@@ -294,7 +386,7 @@ export function ChatDemo() {
           const assistantMessage: Message = {
             id: (Date.now() + 1).toString(),
             role: "assistant",
-            content: aiAnalysisResponse,
+            content: responseContent,
             thinkingTime: totalThinkingTime,
             thinkingSteps: thinkingSteps,
           }
@@ -344,7 +436,7 @@ export function ChatDemo() {
 \`\`\``}
               </pre>
               <div className="flex flex-wrap justify-center gap-2">
-                {["Analise as vendas do Q2", "Mostre gráficos de tendência", "Relatório completo"].map(
+                {["Analise as vendas do Q2", "Mostre gráficos de tendência", "Mostre a estrutura de arquivos"].map(
                   (suggestion) => (
                     <Button
                       key={suggestion}
