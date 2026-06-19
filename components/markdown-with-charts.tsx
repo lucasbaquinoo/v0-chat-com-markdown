@@ -21,6 +21,7 @@ import {
 import { Download, FileSpreadsheet, BarChart3 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { FileTree, parseTreeConfig } from "@/components/file-tree"
+import { DecisionFlow, parseFlowConfig } from "@/components/decision-flow"
 
 interface ChartConfig {
   type: "bar" | "line" | "pie"
@@ -210,6 +211,15 @@ export function MarkdownWithCharts({ content }: MarkdownWithChartsProps) {
         }
       }
 
+      const isFlow = className === "language-flow"
+
+      if (isFlow && typeof children === "string") {
+        const flowConfig = parseFlowConfig(children)
+        if (flowConfig) {
+          return <DecisionFlow config={flowConfig} />
+        }
+      }
+
       const isInline = !className
       if (isInline) {
         return <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm text-foreground">{children}</code>
@@ -219,7 +229,11 @@ export function MarkdownWithCharts({ content }: MarkdownWithChartsProps) {
     pre: ({ children }) => {
       // @ts-expect-error - accessing nested children
       const codeProps = children?.props
-      if (codeProps?.className === "language-chart" || codeProps?.className === "language-tree") {
+      if (
+        codeProps?.className === "language-chart" ||
+        codeProps?.className === "language-tree" ||
+        codeProps?.className === "language-flow"
+      ) {
         return <>{children}</>
       }
       return <pre className="my-4 overflow-x-auto rounded-lg bg-muted p-4">{children}</pre>

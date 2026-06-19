@@ -208,6 +208,60 @@ Aqui está a organização de arquivos recomendada para o seu projeto **Next.js*
 
 *Estrutura gerada com base nas convenções do Next.js App Router.*`
 
+// Markdown com fluxo de decisão definido via bloco de código ```flow
+const creditPolicyResponse = `## Política de Crédito
+
+Abaixo está o fluxo de decisão aplicado a cada solicitação de crédito. Cada etapa é avaliada em sequência até chegar a uma decisão final.
+
+\`\`\`flow
+{
+  "title": "Política de Concessão de Crédito",
+  "steps": [
+    { "type": "start", "label": "Início", "icon": "start" },
+    { "type": "process", "label": "Consultar CPF", "icon": "search" },
+    { "type": "process", "label": "Score", "icon": "gauge" },
+    {
+      "type": "decision",
+      "label": "Tem restrição?",
+      "branches": [
+        { "answer": "Sim", "outcome": "Negado", "result": "deny" },
+        { "answer": "Não", "result": "continue" }
+      ]
+    },
+    {
+      "type": "decision",
+      "label": "Renda compatível?",
+      "branches": [
+        { "answer": "Não", "outcome": "Negado", "result": "deny" },
+        { "answer": "Sim", "result": "continue" }
+      ]
+    },
+    {
+      "type": "decision",
+      "label": "Score > 700?",
+      "branches": [
+        { "answer": "Sim", "outcome": "Aprovação automática", "result": "approve" },
+        { "answer": "Não", "result": "continue" }
+      ]
+    },
+    { "type": "end", "label": "Mesa de análise", "result": "review" }
+  ]
+}
+\`\`\`
+
+### Critérios de Decisão
+
+| Etapa | Condição | Resultado |
+|-------|----------|-----------|
+| Restrição | Possui restrição no CPF | **Negado** |
+| Renda | Renda incompatível com o limite | **Negado** |
+| Score | Score acima de 700 | **Aprovação automática** |
+| Demais casos | Score entre 0 e 700 sem reprovação | **Mesa de análise** |
+
+> A **mesa de análise** avalia manualmente os casos que não foram aprovados nem negados automaticamente, considerando documentação complementar.
+
+*Política vigente — sujeita a revisão pelo comitê de risco.*`
+
 const thinkingSteps: ThinkingStep[] = [
   { text: "Analisando a consulta do usuário...", duration: 800 },
   { text: "Buscando dados relevantes no banco...", duration: 1200 },
@@ -358,7 +412,21 @@ export function ChatDemo() {
       normalized.includes("árvore") ||
       normalized.includes("arvore") ||
       normalized.includes("tree")
-    const responseContent = isTreeQuery ? fileTreeResponse : aiAnalysisResponse
+    const isPolicyQuery =
+      normalized.includes("crédito") ||
+      normalized.includes("credito") ||
+      normalized.includes("política") ||
+      normalized.includes("politica") ||
+      normalized.includes("fluxo") ||
+      normalized.includes("decisão") ||
+      normalized.includes("decisao") ||
+      normalized.includes("aprovação") ||
+      normalized.includes("aprovacao")
+    const responseContent = isPolicyQuery
+      ? creditPolicyResponse
+      : isTreeQuery
+        ? fileTreeResponse
+        : aiAnalysisResponse
 
     setMessages((prev) => [...prev, userMessage])
     setInput("")
@@ -436,7 +504,7 @@ export function ChatDemo() {
 \`\`\``}
               </pre>
               <div className="flex flex-wrap justify-center gap-2">
-                {["Analise as vendas do Q2", "Mostre gráficos de tendência", "Mostre a estrutura de arquivos"].map(
+                {["Analise as vendas do Q2", "Mostre a política de crédito", "Mostre a estrutura de arquivos"].map(
                   (suggestion) => (
                     <Button
                       key={suggestion}
